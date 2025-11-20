@@ -1,4 +1,4 @@
-
+--
 -- uppgift1.sql
 
 
@@ -208,6 +208,7 @@ CREATE TABLE system_setting (
     name   VARCHAR(100)  PRIMARY KEY,
     value  NUMERIC(10,2) NOT NULL
 );
+
 
 
 
