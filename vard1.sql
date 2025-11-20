@@ -1,7 +1,7 @@
 -- =========================================================
 -- varden1.sql
--- Sample data for Course Layout & Teaching Load (higher grade)
--- =========================================================
+-- Sample data for course layout & Teaching load for higher grade
+
 
 BEGIN;
 
@@ -182,3 +182,4 @@ INSERT INTO system_setting(name, value) VALUES
   ('MAX_COURSES_PER_PERIOD', 4.00);
 
 COMMIT;
+
