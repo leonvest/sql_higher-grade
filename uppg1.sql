@@ -1,9 +1,8 @@
--- =========================================================
--- uppgift1.sql
--- Schema for Course Layout & Teaching Load (higher grade)
--- =========================================================
 
--- Drop tables in reverse dependency order
+-- uppgift1.sql
+
+
+
 DROP TABLE IF EXISTS teaching_allocation CASCADE;
 DROP TABLE IF EXISTS planned_activity CASCADE;
 DROP TABLE IF EXISTS teaching_activity_type CASCADE;
@@ -17,26 +16,26 @@ DROP TABLE IF EXISTS period CASCADE;
 DROP TABLE IF EXISTS department CASCADE;
 DROP TABLE IF EXISTS system_setting CASCADE;
 
--- =========================================================
+
 -- department
--- =========================================================
+
 CREATE TABLE department (
     department_id   INTEGER        PRIMARY KEY,
     department_name VARCHAR(1000)  NOT NULL,
     manager_id      INTEGER        NULL        -- FK added after employee exists
 );
 
--- =========================================================
+
 -- job_title
--- =========================================================
+
 CREATE TABLE job_title (
     job_title_id INTEGER        PRIMARY KEY,
     title        VARCHAR(1000)  NOT NULL
 );
 
--- =========================================================
+
 -- employee
--- =========================================================
+
 CREATE TABLE employee (
     employee_id    INTEGER        PRIMARY KEY,
     employment_id  INTEGER        NOT NULL UNIQUE,
@@ -68,9 +67,10 @@ ALTER TABLE department
     FOREIGN KEY (manager_id)
     REFERENCES employee(employee_id);
 
--- =========================================================
+
+
 -- salary_history  (versioned salaries)
--- =========================================================
+
 CREATE TABLE salary_history (
     salary_history_id INTEGER       PRIMARY KEY,
     valid_from        DATE          NOT NULL,
@@ -83,9 +83,9 @@ CREATE TABLE salary_history (
         REFERENCES employee(employee_id)
 );
 
--- =========================================================
+
 -- course
--- =========================================================
+
 CREATE TABLE course (
     course_code    VARCHAR(20)    PRIMARY KEY,
     course_name    VARCHAR(1000)  NOT NULL,
@@ -99,17 +99,17 @@ CREATE TABLE course (
         REFERENCES department(department_id)
 );
 
--- =========================================================
+
 -- period
--- =========================================================
+
 CREATE TABLE period (
     period_code  VARCHAR(10)    PRIMARY KEY,
     description  VARCHAR(1000)  NOT NULL
 );
 
--- =========================================================
+
 -- course_layout  (versioned layouts)
--- =========================================================
+
 CREATE TABLE course_layout (
     layout_id     INTEGER       PRIMARY KEY,
     course_code   VARCHAR(20)   NOT NULL,
@@ -125,18 +125,18 @@ CREATE TABLE course_layout (
         REFERENCES course(course_code)
 );
 
--- =========================================================
+
 -- teaching_activity_type
--- =========================================================
+
 CREATE TABLE teaching_activity_type (
     activity_type_id INTEGER        PRIMARY KEY,
     activity_name    VARCHAR(1000)  NOT NULL,
     factor           DECIMAL(10,2)  NOT NULL
 );
 
--- =========================================================
+
 -- course_instance
--- =========================================================
+
 CREATE TABLE course_instance (
     course_instance_id VARCHAR(20)  PRIMARY KEY,
     year               INTEGER      NOT NULL,
@@ -158,9 +158,9 @@ CREATE TABLE course_instance (
         REFERENCES course_layout(layout_id)
 );
 
--- =========================================================
--- planned_activity  (identifying: CI + activity_type)
--- =========================================================
+
+-- planned_activity  
+
 CREATE TABLE planned_activity (
     course_instance_id VARCHAR(20)  NOT NULL,
     activity_type_id   INTEGER      NOT NULL,
@@ -178,9 +178,9 @@ CREATE TABLE planned_activity (
         REFERENCES teaching_activity_type(activity_type_id)
 );
 
--- =========================================================
+
 -- teaching_allocation
--- =========================================================
+
 CREATE TABLE teaching_allocation (
     allocation_id      INTEGER       PRIMARY KEY,
     allocated_hours    INTEGER       NOT NULL,
@@ -201,14 +201,15 @@ CREATE TABLE teaching_allocation (
         REFERENCES teaching_activity_type(activity_type_id)
 );
 
--- =========================================================
+
 -- system_setting  (business constants, e.g. "4 courses")
--- =========================================================
+
 CREATE TABLE system_setting (
     name   VARCHAR(100)  PRIMARY KEY,
     value  NUMERIC(10,2) NOT NULL
 );
 
--- =========================================================
--- End of uppgift1.sql
--- =========================================================
+
+
+
+
