@@ -1,8 +1,7 @@
---
--- uppgift1.sql
 
 
 
+-- Drop tables is in reverse dependency order
 DROP TABLE IF EXISTS teaching_allocation CASCADE;
 DROP TABLE IF EXISTS planned_activity CASCADE;
 DROP TABLE IF EXISTS teaching_activity_type CASCADE;
@@ -17,6 +16,7 @@ DROP TABLE IF EXISTS department CASCADE;
 DROP TABLE IF EXISTS system_setting CASCADE;
 
 
+
 -- department
 
 CREATE TABLE department (
@@ -26,12 +26,16 @@ CREATE TABLE department (
 );
 
 
+
+
 -- job_title
 
 CREATE TABLE job_title (
     job_title_id INTEGER        PRIMARY KEY,
     title        VARCHAR(1000)  NOT NULL
 );
+
+
 
 
 -- employee
@@ -61,11 +65,15 @@ CREATE TABLE employee (
         REFERENCES employee(employee_id)
 );
 
--- connect department.manager_id → employee.employee_id
+
+-- (NEW) Ensure department.manager_id references employee(employee_id)
 ALTER TABLE department
-    ADD CONSTRAINT fk_department_manager
-    FOREIGN KEY (manager_id)
-    REFERENCES employee(employee_id);
+  ADD CONSTRAINT fk_department_manager
+  FOREIGN KEY (manager_id)
+  REFERENCES employee(employee_id)
+  ON DELETE SET NULL;
+
+
 
 
 
@@ -84,6 +92,8 @@ CREATE TABLE salary_history (
 );
 
 
+
+
 -- course
 
 CREATE TABLE course (
@@ -100,12 +110,16 @@ CREATE TABLE course (
 );
 
 
+
+
 -- period
 
 CREATE TABLE period (
     period_code  VARCHAR(10)    PRIMARY KEY,
     description  VARCHAR(1000)  NOT NULL
 );
+
+
 
 
 -- course_layout  (versioned layouts)
@@ -126,6 +140,8 @@ CREATE TABLE course_layout (
 );
 
 
+
+
 -- teaching_activity_type
 
 CREATE TABLE teaching_activity_type (
@@ -133,6 +149,8 @@ CREATE TABLE teaching_activity_type (
     activity_name    VARCHAR(1000)  NOT NULL,
     factor           DECIMAL(10,2)  NOT NULL
 );
+
+
 
 
 -- course_instance
@@ -159,7 +177,9 @@ CREATE TABLE course_instance (
 );
 
 
--- planned_activity  
+
+
+-- planned_activity  (identifying: CI + activity_type)
 
 CREATE TABLE planned_activity (
     course_instance_id VARCHAR(20)  NOT NULL,
@@ -177,6 +197,8 @@ CREATE TABLE planned_activity (
         FOREIGN KEY (activity_type_id)
         REFERENCES teaching_activity_type(activity_type_id)
 );
+
+
 
 
 -- teaching_allocation
@@ -202,6 +224,8 @@ CREATE TABLE teaching_allocation (
 );
 
 
+
+
 -- system_setting  (business constants, e.g. "4 courses")
 
 CREATE TABLE system_setting (
@@ -209,8 +233,66 @@ CREATE TABLE system_setting (
     value  NUMERIC(10,2) NOT NULL
 );
 
+-- added based on ammendment bullet points 
+CREATE OR REPLACE FUNCTION enforce_max_courses_per_period()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_year        INTEGER;
+  v_period      TEXT;
+  v_limit       INTEGER;
+  v_count       INTEGER;
+BEGIN
+  -- get the year + period for the course instance being allocated
+  SELECT ci.year, ci.period_code
+    INTO v_year, v_period
+  FROM course_instance ci
+  WHERE ci.course_instance_id = NEW.course_instance_id;
+
+  IF v_year IS NULL OR v_period IS NULL THEN
+    RAISE EXCEPTION 'Invalid course_instance_id: %', NEW.course_instance_id;
+  END IF;
+
+  -- read limit from system_setting (fallback to 4 if missing)
+  SELECT COALESCE(MAX(value)::INT, 4)
+    INTO v_limit
+  FROM system_setting
+  WHERE name = 'MAX_COURSES_PER_PERIOD';
+
+  -- Count distinct course instances this employee teaches in same year+period
+  SELECT COUNT(DISTINCT ta.course_instance_id)
+    INTO v_count
+  FROM teaching_allocation ta
+  JOIN course_instance ci2
+    ON ci2.course_instance_id = ta.course_instance_id
+  WHERE ta.employee_id = NEW.employee_id
+    AND ci2.year = v_year
+    AND ci2.period_code = v_period;
+
+  IF v_count > v_limit THEN
+    RAISE EXCEPTION
+      'Business rule violation: employee % teaches % course(s) in % %, max allowed is %',
+      NEW.employee_id, v_count, v_period, v_year, v_limit;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_max_courses_per_period ON teaching_allocation;
+
+CREATE CONSTRAINT TRIGGER trg_max_courses_per_period
+AFTER INSERT OR UPDATE OF employee_id, course_instance_id
+ON teaching_allocation
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION enforce_max_courses_per_period();
 
 
 
 
+
+
+-- End of uppg1.sql
 
